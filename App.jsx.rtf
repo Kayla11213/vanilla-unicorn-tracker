@@ -1,0 +1,207 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2868
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import React, \{ useState, useEffect \} from "react";\
+\
+export default function CommissionSite() \{\
+  const [rank, setRank] = useState("Bartender");\
+  const [name, setName] = useState("");\
+  const [savedNames, setSavedNames] = useState([]);\
+  const [weeklyData, setWeeklyData] = useState(\{\});\
+  const [cart, setCart] = useState(\{\});\
+  const [vipDiscount, setVipDiscount] = useState(false);\
+\
+  const commissions = \{\
+    Bartender: 0.15,\
+    Manager: 0.2,\
+  \};\
+\
+  const singles = [\
+    ["Sliders", 300],\
+    ["Basic Drink", 250],\
+    ["Mixed Drink", 350],\
+  ];\
+\
+  const bundles3 = [\
+    ["3 Basic", 600],\
+    ["3 Mixed", 900],\
+    ["3x3 Basic", 1200],\
+    ["3x3 Mixed", 1500],\
+  ];\
+\
+  const bundles12 = [\
+    ["12 Basic", 2500],\
+    ["12 Mixed", 3500],\
+    ["12x12 Basic", 4500],\
+    ["12x12 Mixed", 6000],\
+  ];\
+\
+  useEffect(() => \{\
+    const saved = localStorage.getItem("vu_commissions");\
+    const names = localStorage.getItem("vu_names");\
+    if (saved) setWeeklyData(JSON.parse(saved));\
+    if (names) setSavedNames(JSON.parse(names));\
+  \}, []);\
+\
+  useEffect(() => \{\
+    localStorage.setItem("vu_commissions", JSON.stringify(weeklyData));\
+  \}, [weeklyData]);\
+\
+  useEffect(() => \{\
+    localStorage.setItem("vu_names", JSON.stringify(savedNames));\
+  \}, [savedNames]);\
+\
+  const toggleItem = (label, price) => \{\
+    setCart((prev) => \{\
+      const newCart = \{ ...prev \};\
+      if (newCart[label]) delete newCart[label];\
+      else newCart[label] = price;\
+      return newCart;\
+    \});\
+  \};\
+\
+  const rawTotal = Object.values(cart).reduce((a, b) => a + b, 0);\
+  const total = vipDiscount ? rawTotal * 0.5 : rawTotal;\
+  const commissionEarned = total * commissions[rank];\
+\
+  const saveWeek = async () => \{\
+    if (!name) return;\
+\
+    if (!savedNames.includes(name)) \{\
+      setSavedNames([...savedNames, name]);\
+    \}\
+\
+    const prev = weeklyData[name] || \{ sales: 0, commission: 0 \};\
+\
+    const newData = \{\
+      ...weeklyData,\
+      [name]: \{\
+        sales: prev.sales + total,\
+        commission: prev.commission + commissionEarned,\
+      \},\
+    \};\
+\
+    setWeeklyData(newData);\
+\
+    // DISCORD WEBHOOK\
+    try \{\
+      await fetch("https://discord.com/api/webhooks/1485149118832578563/NUMjDIthuaR1TUT57ZleD-fGmKzxd87vocAjUZACulP7cIeKVUCWEKOFMi1ii9WaQBD2", \{\
+        method: "POST",\
+        headers: \{ "Content-Type": "application/json" \},\
+        body: JSON.stringify(\{\
+          content: `\uc0\u55357 \u56470  Sale Logged \u55357 \u56470 \\n$\{name\} ($\{rank\})\\nSale: $$\{total\}\\nCommission: $$\{commissionEarned.toFixed(2)\}`,\
+        \}),\
+      \});\
+    \} catch (err) \{\
+      console.error("Webhook failed", err);\
+    \}\
+\
+    setCart(\{\});\
+    setVipDiscount(false);\
+  \};\
+\
+  const resetWeek = () => \{\
+    setWeeklyData(\{\});\
+    localStorage.removeItem("vu_commissions");\
+  \};\
+\
+  const renderSection = (title, items) => (\
+    <div className="mb-6">\
+      <h2 className="text-lg text-pink-500 mb-2">\{title\}</h2>\
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">\
+        \{items.map(([label, price]) => (\
+          <button\
+            key=\{label\}\
+            onClick=\{() => toggleItem(label, price)\}\
+            className=\{`p-3 rounded-xl border $\{\
+              cart[label]\
+                ? "bg-pink-500 text-black"\
+                : "bg-black text-pink-400 border-pink-500"\
+            \}`\}\
+          >\
+            \{label\} - $\{price\}\
+          </button>\
+        ))\}\
+      </div>\
+    </div>\
+  );\
+\
+  return (\
+    <div className="min-h-screen bg-black text-pink-400 p-4">\
+      <div className="max-w-4xl mx-auto">\
+        <h1 className="text-3xl font-bold text-center text-pink-500 mb-4">\
+          \uc0\u55358 \u56708  Vanilla Unicorn Tracker \u55358 \u56708 \
+        </h1>\
+\
+        \{/* Name + Rank */\}\
+        <div className="mb-4">\
+          <input\
+            list="names"\
+            placeholder="Employee Name"\
+            value=\{name\}\
+            onChange=\{(e) => setName(e.target.value)\}\
+            className="w-full p-2 mb-2 bg-black border border-pink-500 rounded"\
+          />\
+          <datalist id="names">\
+            \{savedNames.map((n) => (\
+              <option key=\{n\} value=\{n\} />\
+            ))\}\
+          </datalist>\
+\
+          <select\
+            value=\{rank\}\
+            onChange=\{(e) => setRank(e.target.value)\}\
+            className="w-full p-2 bg-black border border-pink-500 rounded"\
+          >\
+            <option value="Bartender">Bartender (15%)</option>\
+            <option value="Manager">Manager (20%)</option>\
+          </select>\
+        </div>\
+\
+        \{/* VIP */\}\
+        <div className="text-center mb-4">\
+          <button\
+            onClick=\{() => setVipDiscount(!vipDiscount)\}\
+            className=\{`px-4 py-2 rounded-xl border $\{\
+              vipDiscount ? "bg-green-400 text-black" : "border-pink-500"\
+            \}`\}\
+          >\
+            VIP 50% OFF\
+          </button>\
+        </div>\
+\
+        \{/* Sections */\}\
+        \{renderSection("Singles", singles)\}\
+        \{renderSection("3x3 & Small Bundles", bundles3)\}\
+        \{renderSection("12x12 & Large Bundles", bundles12)\}\
+\
+        \{/* Totals */\}\
+        <div className="text-center mb-4">\
+          <p>Total: $\{total\}</p>\
+          <p className="text-green-400">\
+            Commission: $\{commissionEarned.toFixed(2)\}\
+          </p>\
+        </div>\
+\
+        <button\
+          onClick=\{saveWeek\}\
+          className="w-full bg-pink-500 text-black py-2 rounded mb-2"\
+        >\
+          Add to Weekly + Send to Discord\
+        </button>\
+\
+        <button\
+          onClick=\{resetWeek\}\
+          className="w-full bg-red-500 text-black py-2 rounded"\
+        >\
+          Reset Week\
+        </button>\
+      </div>\
+    </div>\
+  );\
+\}\
+}
