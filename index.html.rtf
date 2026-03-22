@@ -1,0 +1,225 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2868
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 <!DOCTYPE html>\
+<html lang="en">\
+<head>\
+  <meta charset="UTF-8" />\
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>\
+  <title>Vanilla Unicorn Tracker</title>\
+\
+  <style>\
+    body \{\
+      background: #000;\
+      color: #ff69b4;\
+      font-family: Arial, sans-serif;\
+      padding: 16px;\
+    \}\
+\
+    .container \{\
+      max-width: 600px;\
+      margin: auto;\
+    \}\
+\
+    h1 \{\
+      text-align: center;\
+      text-shadow: 0 0 10px #ff69b4;\
+    \}\
+\
+    input, select, button \{\
+      width: 100%;\
+      padding: 10px;\
+      margin-bottom: 10px;\
+      border-radius: 8px;\
+      border: 1px solid #ff69b4;\
+      background: #000;\
+      color: #ff69b4;\
+    \}\
+\
+    button.active \{\
+      background: #ff69b4;\
+      color: #000;\
+    \}\
+\
+    .grid \{\
+      display: grid;\
+      grid-template-columns: 1fr 1fr;\
+      gap: 8px;\
+    \}\
+\
+    .section \{\
+      margin-bottom: 16px;\
+    \}\
+\
+    .green \{\
+      color: #00ff9c;\
+    \}\
+  </style>\
+</head>\
+\
+<body>\
+<div class="container">\
+  <h1>\uc0\u55358 \u56708  Vanilla Unicorn Tracker \u55358 \u56708 </h1>\
+\
+  <input id="name" placeholder="Employee Name" list="names" />\
+  <datalist id="names"></datalist>\
+\
+  <select id="rank">\
+    <option value="Bartender">Bartender (15%)</option>\
+    <option value="Manager">Manager (20%)</option>\
+  </select>\
+\
+  <button id="vip">VIP 50% OFF</button>\
+\
+  <div id="items"></div>\
+\
+  <p>Total: $<span id="total">0</span></p>\
+  <p class="green">Commission: $<span id="commission">0</span></p>\
+\
+  <button onclick="saveWeek()">Add to Weekly + Send to Discord</button>\
+  <button onclick="resetWeek()">Reset Week</button>\
+</div>\
+\
+<script>\
+const webhook = "https://discord.com/api/webhooks/1485149118832578563/NUMjDIthuaR1TUT57ZleD-fGmKzxd87vocAjUZACulP7cIeKVUCWEKOFMi1ii9WaQBD2";\
+\
+const commissions = \{\
+  Bartender: 0.15,\
+  Manager: 0.2\
+\};\
+\
+const sections = \{\
+  "Singles": [\
+    ["Sliders", 300],\
+    ["Basic Drink", 250],\
+    ["Mixed Drink", 350]\
+  ],\
+  "3x3 Bundles": [\
+    ["3 Basic", 600],\
+    ["3 Mixed", 900],\
+    ["3x3 Basic", 1200],\
+    ["3x3 Mixed", 1500]\
+  ],\
+  "12x12 Bundles": [\
+    ["12 Basic", 2500],\
+    ["12 Mixed", 3500],\
+    ["12x12 Basic", 4500],\
+    ["12x12 Mixed", 6000]\
+  ]\
+\};\
+\
+let cart = \{\};\
+let vip = false;\
+let weekly = JSON.parse(localStorage.getItem("weekly") || "\{\}");\
+let names = JSON.parse(localStorage.getItem("names") || "[]");\
+\
+const itemsDiv = document.getElementById("items");\
+\
+function render() \{\
+  itemsDiv.innerHTML = "";\
+\
+  Object.entries(sections).forEach(([title, items]) => \{\
+    const section = document.createElement("div");\
+    section.className = "section";\
+\
+    section.innerHTML = `<h3>$\{title\}</h3><div class="grid"></div>`;\
+    const grid = section.querySelector(".grid");\
+\
+    items.forEach(([label, price]) => \{\
+      const btn = document.createElement("button");\
+      btn.innerText = `$\{label\} - $$\{price\}`;\
+\
+      if (cart[label]) btn.classList.add("active");\
+\
+      btn.onclick = () => \{\
+        if (cart[label]) delete cart[label];\
+        else cart[label] = price;\
+        update();\
+      \};\
+\
+      grid.appendChild(btn);\
+    \});\
+\
+    itemsDiv.appendChild(section);\
+  \});\
+\}\
+\
+function update() \{\
+  render();\
+\
+  let total = Object.values(cart).reduce((a, b) => a + b, 0);\
+  if (vip) total *= 0.5;\
+\
+  document.getElementById("total").innerText = total;\
+\
+  const rank = document.getElementById("rank").value;\
+  const commission = total * commissions[rank];\
+\
+  document.getElementById("commission").innerText = commission.toFixed(2);\
+\}\
+\
+document.getElementById("vip").onclick = () => \{\
+  vip = !vip;\
+  document.getElementById("vip").classList.toggle("active");\
+  update();\
+\};\
+\
+function saveWeek() \{\
+  const name = document.getElementById("name").value;\
+  const rank = document.getElementById("rank").value;\
+\
+  if (!name) return alert("Enter name");\
+\
+  if (!names.includes(name)) \{\
+    names.push(name);\
+    localStorage.setItem("names", JSON.stringify(names));\
+    document.getElementById("names").innerHTML =\
+      names.map(n => `<option value="$\{n\}">`).join("");\
+  \}\
+\
+  let total = Object.values(cart).reduce((a, b) => a + b, 0);\
+  if (vip) total *= 0.5;\
+\
+  const commission = total * commissions[rank];\
+\
+  if (!weekly[name]) weekly[name] = \{ sales: 0, commission: 0 \};\
+\
+  weekly[name].sales += total;\
+  weekly[name].commission += commission;\
+\
+  localStorage.setItem("weekly", JSON.stringify(weekly));\
+\
+  fetch(webhook, \{\
+    method: "POST",\
+    headers: \{ "Content-Type": "application/json" \},\
+    body: JSON.stringify(\{\
+      content: `\uc0\u55357 \u56470  Sale Logged \u55357 \u56470 \
+$\{name\} ($\{rank\})\
+Sale: $$\{total\}\
+Commission: $$\{commission.toFixed(2)\}`\
+    \})\
+  \});\
+\
+  cart = \{\};\
+  vip = false;\
+  update();\
+\}\
+\
+function resetWeek() \{\
+  weekly = \{\};\
+  localStorage.removeItem("weekly");\
+  alert("Weekly reset");\
+\}\
+\
+document.getElementById("names").innerHTML =\
+  names.map(n => `<option value="$\{n\}">`).join("");\
+\
+update();\
+</script>\
+\
+</body>\
+</html>}
